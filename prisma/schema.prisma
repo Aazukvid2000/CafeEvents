@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Rol {
+  GERENTE
+  CHEF
+  MESERO
+  CAJERO
+  CONTADOR
+  ADMINISTRADOR
+  CLIENTE
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  PREPARANDO
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  CONVERTIDA
+}
+
+enum EstadoReservacion {
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+enum EstadoEvento {
+  PLANIFICADO
+  EN_CURSO
+  COMPLETADO
+  CANCELADO
+}
+
+enum TipoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  OTRO
+}
+
+enum TipoOperacion {
+  CREAR
+  EDITAR
+  ELIMINAR
+  VER
+  PAGO
+}
+
+// ============================================
+// MÓDULO: ROLES Y USUARIOS
+// ============================================
+
+model Usuario {
+  id                    Int      @id @default(autoincrement())
+  nombre                String
+  apellido              String
+  email                 String   @unique
+  telefono              String?
+  contrasena            String
+  rol                   Rol
+  activo                Boolean  @default(true)
+  fechaCreacion         DateTime @default(now())
+  fechaActualizacion    DateTime @updatedAt
+
+  // Relaciones
+  pedidos               Pedido[]
+  cuentas               Cuenta[]
+  pagos                 Pago[]
+  cotizaciones          Cotizacion[]
+  logAuditoria          LogAuditoria[]
+
+  @@map("usuarios")
+}
+
+// ============================================
+// MÓDULO: RESTAURANTE
+// ============================================
+
+model Mesa {
+  id                    Int      @id @default(autoincrement())
+  numero                Int      @unique
+  capacidad             Int
+  ubicacion             String?
+  disponible            Boolean  @default(true)
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  pedidos               Pedido[]
+
+  @@map("mesas")
+}
+
+model Producto {
+  id                    Int      @id @default(autoincrement())
+  nombre                String   @unique
+  descripcion           String?
+  precio                Decimal  @db.Decimal(10, 2)
+  categoria             String   // Ej: "Bebida", "Plato Principal", "Postre"
+  disponible            Boolean  @default(true)
+  imagenUrl             String?
+  fechaCreacion         DateTime @default(now())
+  fechaActualizacion    DateTime @updatedAt
+
+  // Relaciones
+  detallesPedido        DetallePedido[]
+  recetas               Receta[]
+  menuEventos           MenuEvento[]
+
+  @@map("productos")
+}
+
+model Pedido {
+  id                    Int      @id @default(autoincrement())
+  mesaId                Int
+  usuarioId             Int      // Mesero
+  estado                EstadoPedido @default(PENDIENTE)
+  total                 Decimal  @db.Decimal(10, 2) @default(0)
+  observaciones         String?
+  fechaCreacion         DateTime @default(now())
+  fechaActualizacion    DateTime @updatedAt
+
+  // Relaciones
+  mesa                  Mesa     @relation(fields: [mesaId], references: [id])
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+  detallesPedido        DetallePedido[]
+  cuenta                Cuenta?
+
+  @@map("pedidos")
+  @@index([mesaId])
+  @@index([usuarioId])
+}
+
+model DetallePedido {
+  id                    Int      @id @default(autoincrement())
+  pedidoId              Int
+  productoId            Int?
+  cantidad              Int
+  precioUnitario        Decimal  @db.Decimal(10, 2)
+  subtotal              Decimal  @db.Decimal(10, 2)
+  observaciones         String?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  pedido                Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto              Producto? @relation(fields: [productoId], references: [id])
+
+  @@map("detalles_pedido")
+  @@index([pedidoId])
+}
+
+model Cuenta {
+  id                    Int      @id @default(autoincrement())
+  pedidoId              Int      @unique
+  usuarioId             Int      // Cajero
+  subtotal              Decimal  @db.Decimal(10, 2)
+  impuesto              Decimal  @db.Decimal(10, 2) @default(0)
+  total                 Decimal  @db.Decimal(10, 2)
+  metodoPago            TipoPago
+  pagada                Boolean  @default(false)
+  fechaPago             DateTime?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  pedido                Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("cuentas")
+  @@index([pedidoId])
+  @@index([usuarioId])
+}
+
+// ============================================
+// MÓDULO: EVENTOS
+// ============================================
+
+model Salon {
+  id                    Int      @id @default(autoincrement())
+  nombre                String   @unique
+  capacidadMaxima       Int
+  descripcion           String?
+  ubicacion             String?
+  precio_base           Decimal  @db.Decimal(10, 2)
+  servicios             String?  // Ej: "WiFi, Aire Acondicionado, Proyector"
+  disponible            Boolean  @default(true)
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  eventos               Evento[]
+
+  @@map("salones")
+}
+
+model Evento {
+  id                    Int      @id @default(autoincrement())
+  salonId               Int
+  nombre                String
+  descripcion           String?
+  tipo                  String   // Ej: "Boda", "Reunión de Negocios", "Cumpleaños"
+  fechaInicio           DateTime
+  fechaFinal            DateTime
+  cantidadPersonas      Int
+  estado                EstadoEvento @default(PLANIFICADO)
+  contactoNombre        String?
+  contactoEmail         String?
+  contactoTelefono      String?
+  costo_total           Decimal  @db.Decimal(10, 2)
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  salon                 Salon    @relation(fields: [salonId], references: [id])
+  menuEventos           MenuEvento[]
+  reservacion           Reservacion?
+
+  @@map("eventos")
+  @@index([salonId])
+}
+
+model Cotizacion {
+  id                    Int      @id @default(autoincrement())
+  usuarioId             Int      // Usuario que crea la cotización
+  clienteNombre         String
+  clienteEmail          String
+  clienteTelefono       String
+  descripcion           String
+  monto                 Decimal  @db.Decimal(10, 2)
+  estado                EstadoCotizacion @default(PENDIENTE)
+  notas                 String?
+  fechaVencimiento      DateTime?
+  fechaCreacion         DateTime @default(now())
+  fechaActualizacion    DateTime @updatedAt
+
+  // Relaciones
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+  reservacion           Reservacion?
+
+  @@map("cotizaciones")
+  @@index([usuarioId])
+}
+
+model Reservacion {
+  id                    Int      @id @default(autoincrement())
+  cotizacionId          Int      @unique
+  eventoId              Int      @unique
+  fechaConfirmacion     DateTime @default(now())
+  senal                 Decimal  @db.Decimal(10, 2)
+  saldoPendiente        Decimal  @db.Decimal(10, 2)
+  estado                EstadoReservacion @default(CONFIRMADA)
+  notas                 String?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  cotizacion            Cotizacion @relation(fields: [cotizacionId], references: [id])
+  evento                Evento   @relation(fields: [eventoId], references: [id])
+
+  @@map("reservaciones")
+  @@index([cotizacionId])
+  @@index([eventoId])
+}
+
+model MenuEvento {
+  id                    Int      @id @default(autoincrement())
+  eventoId              Int
+  productoId            Int
+  cantidad              Int
+  precioUnitario        Decimal  @db.Decimal(10, 2)
+  observaciones         String?
+
+  // Relaciones
+  evento                Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  producto              Producto @relation(fields: [productoId], references: [id])
+
+  @@map("menu_eventos")
+  @@index([eventoId])
+  @@index([productoId])
+}
+
+// ============================================
+// MÓDULO: INVENTARIO
+// ============================================
+
+model Insumo {
+  id                    Int      @id @default(autoincrement())
+  nombre                String   @unique
+  descripcion           String?
+  unidadMedida          String   // Ej: "kg", "litro", "unidad"
+  cantidadStock         Decimal  @db.Decimal(10, 2)
+  cantidadMinima        Decimal  @db.Decimal(10, 2)
+  precioUnitario        Decimal  @db.Decimal(10, 2)
+  proveedor             String?
+  disponible            Boolean  @default(true)
+  fechaCreacion         DateTime @default(now())
+  fechaActualizacion    DateTime @updatedAt
+
+  // Relaciones
+  compras               CompraInsumo[]
+  recetas               Receta[]
+
+  @@map("insumos")
+}
+
+model CompraInsumo {
+  id                    Int      @id @default(autoincrement())
+  insumoId              Int
+  cantidad              Decimal  @db.Decimal(10, 2)
+  precioUnitario        Decimal  @db.Decimal(10, 2)
+  precioTotal           Decimal  @db.Decimal(10, 2)
+  fechaCompra           DateTime
+  numeroFactura         String?
+  proveedor             String
+  notas                 String?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  insumo                Insumo   @relation(fields: [insumoId], references: [id])
+
+  @@map("compras_insumo")
+  @@index([insumoId])
+}
+
+model Receta {
+  id                    Int      @id @default(autoincrement())
+  productoId            Int
+  insumoId              Int
+  cantidad              Decimal  @db.Decimal(10, 2)  // Cantidad de insumo necesaria
+  unidadMedida          String   // Debe coincidir con la del insumo
+  instrucciones         String?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  producto              Producto @relation(fields: [productoId], references: [id])
+  insumo                Insumo   @relation(fields: [insumoId], references: [id])
+
+  @@map("recetas")
+  @@unique([productoId, insumoId])
+  @@index([productoId])
+  @@index([insumoId])
+}
+
+// ============================================
+// MÓDULO: PAGOS
+// ============================================
+
+model Pago {
+  id                    Int      @id @default(autoincrement())
+  usuarioId             Int      // Cajero o Usuario que registra el pago
+  monto                 Decimal  @db.Decimal(10, 2)
+  tipo                  TipoPago
+  referencia            String?  // Ej: Número de transferencia, número de tarjeta
+  descripcion           String?
+  confirmado            Boolean  @default(false)
+  fechaPago             DateTime @default(now())
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("pagos")
+  @@index([usuarioId])
+}
+
+// ============================================
+// MÓDULO: AUDITORÍA
+// ============================================
+
+model LogAuditoria {
+  id                    Int      @id @default(autoincrement())
+  usuarioId             Int
+  tabla                 String   // Nombre de la tabla modificada
+  operacion             TipoOperacion
+  registroId            Int?     // ID del registro modificado
+  datosAnteriores       String?  // JSON con datos anteriores
+  datosNuevos           String?  // JSON con datos nuevos
+  descripcion           String?
+  ipAddress             String?
+  userAgent             String?
+  fechaCreacion         DateTime @default(now())
+
+  // Relaciones
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("logs_auditoria")
+  @@index([usuarioId])
+  @@index([tabla])
+  @@index([fechaCreacion])
+}
