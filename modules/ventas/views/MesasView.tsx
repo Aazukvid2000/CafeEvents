@@ -9,7 +9,7 @@ interface Props {
 
 export const MesasView = ({ onSelectMesa, onParaLlevar }: Props) => {
   return (
-    <div className="p-10 bg-gray-100 min-h-screen">
+    <div className="p-10 bg-gray-300 min-h-screen">
       <header className="border-b-4 border-gray-900 mb-8 pb-4 flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black uppercase tracking-tighter text-gray-900">Panel de Mesas</h1>

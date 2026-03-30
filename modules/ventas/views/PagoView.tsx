@@ -6,7 +6,7 @@ import { PEDIDO_ACTIVO_MOCK } from '../mocks/pedido.mock';
 import { ProductCard } from '../components/ProductCard';
 import { PedidoList } from '../components/PedidoList';
 import { OrderSummary } from '../components/OrderSummary';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { ConfirmModal } from '../components/ConfirmModal'; // Tu componente personalizado
 import { usePedido } from '../hooks/usePedido';
 
 interface Props {
@@ -15,7 +15,6 @@ interface Props {
 }
 
 export const PedidoView = ({ mesaId, onBack }: Props) => {
-  const mesaInfo = MESAS_MOCK.find(m => m.id === mesaId);
   const initialPedido = (mesaId === 2) ? PEDIDO_ACTIVO_MOCK : undefined;
 
   const { 
@@ -25,19 +24,30 @@ export const PedidoView = ({ mesaId, onBack }: Props) => {
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
   const [nombreCliente, setNombreCliente] = useState('');
-  const [modalOpen, setModalOpen] = useState<'NONE' | 'CONFIRM_ENVIO' | 'CONFIRM_ANULAR' | 'SUCCESS'>('NONE');
+  
+  // ESTADO PARA CONTROLAR QUÉ MODAL MOSTRAR
+  const [modalOpen, setModalOpen] = useState<'NONE' | 'CONFIRM_ENVIO' | 'CONFIRM_ANULAR' | 'SUCCESS' | 'ERROR_LLEVAR'>('NONE');
 
   const categorias = ['Todas', ...new Set(PRODUCTOS_MOCK.map(p => p.categoria))];
 
-  // LÓGICA INTELIGENTE DE SALIDA
-  const handleBackAction = () => {
-    // Si no hay productos nuevos o la lista está vacía, regresamos directo
-    if (detalles.length === 0 || (initialPedido && detalles.length === initialPedido.detalles.length)) {
-      onBack();
-    } else {
-      // Solo mostramos el modal si hay cambios que se perderían
-      setModalOpen('CONFIRM_ANULAR');
+  // Acción: Confirmar Envío (Paso 8)
+  const handlePreConfirmar = () => {
+    // Validación S3: Nombre obligatorio para llevar
+    if (!mesaId && !nombreCliente.trim()) {
+      setModalOpen('ERROR_LLEVAR');
+      return;
     }
+    setModalOpen('CONFIRM_ENVIO');
+  };
+
+  const onConfirmarEnvio = () => {
+    enviarPedido();
+    setModalOpen('SUCCESS');
+  };
+
+  const onConfirmarAnulacion = () => {
+    anularPedido();
+    onBack();
   };
 
   return (
@@ -45,34 +55,25 @@ export const PedidoView = ({ mesaId, onBack }: Props) => {
       
       <div className="w-2/3 flex flex-col border-r-4 border-gray-800 bg-white">
         <nav className="p-4 bg-gray-900 text-white flex justify-between items-center">
-          <button 
-            onClick={handleBackAction} 
-            className="text-[10px] font-black border border-white px-3 py-1 uppercase hover:bg-white hover:text-black transition-all"
-          >
-            {detalles.length > 0 ? "← ANULAR / VOLVER" : "← VOLVER"}
+          <button onClick={() => setModalOpen('CONFIRM_ANULAR')} className="text-[10px] font-black border border-white px-3 py-1 uppercase hover:bg-white hover:text-black">
+            ← ANULAR / VOLVER
           </button>
-          
-          <div className="text-right flex flex-col">
-            <span className="font-black text-xl italic uppercase leading-none">
-              {mesaId ? `MESA ${mesaId}` : "ORDEN PARA LLEVAR"}
+          <div className="text-right">
+            <span className="font-black text-xl italic uppercase block leading-none">
+              {mesaId ? `Mesa ${mesaId}` : "Orden Para Llevar (S3)"}
             </span>
-            {mesaId && (
-              <span className={`text-[9px] font-bold uppercase mt-1 ${mesaInfo?.disponible ? 'text-green-400' : 'text-yellow-400'}`}>
-                • {mesaInfo?.disponible ? 'Disponible' : 'En Servicio (Adición)'}
-              </span>
-            )}
           </div>
         </nav>
 
         {!mesaId && (
           <div className="p-4 bg-yellow-100 border-b-4 border-gray-800">
-            <label className="text-[10px] font-black block mb-1 uppercase">Nombre del Cliente (*)</label>
+            <label className="text-[10px] font-black block mb-1 uppercase text-gray-700">Nombre del Cliente (*)</label>
             <input 
               type="text" 
               value={nombreCliente}
               onChange={(e) => setNombreCliente(e.target.value)}
-              placeholder="EJ. PABLO CRUZ"
-              className="w-full p-3 border-4 border-gray-800 bg-white font-mono text-sm focus:outline-none uppercase font-bold"
+              className="w-full p-3 border-4 border-gray-800 bg-white font-mono text-sm focus:bg-yellow-50 outline-none uppercase font-bold"
+              placeholder="CAMPO OBLIGATORIO"
             />
           </div>
         )}
@@ -95,13 +96,6 @@ export const PedidoView = ({ mesaId, onBack }: Props) => {
       </div>
 
       <div className="w-1/3 flex flex-col bg-white shadow-2xl">
-        {/* Indicador de cuenta abierta */}
-        {initialPedido && (
-          <div className="bg-gray-200 text-gray-700 p-1 text-[9px] font-black text-center border-b border-gray-800 uppercase tracking-widest">
-            Añadiendo a cuenta existente
-          </div>
-        )}
-        
         <PedidoList 
           detalles={detalles} 
           onRemoveItem={eliminarProducto} 
@@ -111,39 +105,55 @@ export const PedidoView = ({ mesaId, onBack }: Props) => {
         
         <OrderSummary 
           total={total} 
-          onConfirm={() => setModalOpen('CONFIRM_ENVIO')} 
+          onConfirm={handlePreConfirmar} 
           onCancel={() => setModalOpen('CONFIRM_ANULAR')} 
           disabled={detalles.length === 0} 
         />
       </div>
 
-      {/* MODALES */}
+      {/* --- MODALES PRESENTABLES (SIN ALERT/CONFIRM DE SISTEMA) --- */}
+
+      {/* Confirmar Envío a Cocina */}
       <ConfirmModal 
         isOpen={modalOpen === 'CONFIRM_ENVIO'}
-        title="Enviar Comanda"
-        message="¿Confirmar envío a cocina para su preparación? [Paso 8]"
-        onConfirm={() => { enviarPedido(); setModalOpen('SUCCESS'); }}
+        title="Enviar a Cocina"
+        message="¿Desea enviar esta comanda digital a la cocina? [Paso 8]"
+        onConfirm={onConfirmarEnvio}
         onCancel={() => setModalOpen('NONE')}
       />
 
+      {/* Confirmar Anulación */}
       <ConfirmModal 
         isOpen={modalOpen === 'CONFIRM_ANULAR'}
-        title="¡ATENCIÓN!"
-        message="¿Está seguro de salir? Se descartarán los cambios no enviados. [S2]"
+        title="Anular Pedido"
+        message="¿Está seguro? Se borrarán todos los productos seleccionados. [S2]"
         type="danger"
-        confirmText="SÍ, SALIR"
-        onConfirm={() => { anularPedido(); onBack(); }}
+        confirmText="Sí, Anular"
+        onConfirm={onConfirmarAnulacion}
         onCancel={() => setModalOpen('NONE')}
       />
 
+      {/* Éxito al Enviar */}
       <ConfirmModal 
         isOpen={modalOpen === 'SUCCESS'}
-        title="¡ÉXITO!"
-        message="Comanda enviada correctamente a cocina. [Paso 9]"
-        confirmText="ACEPTAR"
+        title="¡Éxito!"
+        message="El pedido ha sido enviado exitosamente a cocina. [Paso 9]"
+        confirmText="Entendido"
         onConfirm={() => { setModalOpen('NONE'); onBack(); }}
         onCancel={() => { setModalOpen('NONE'); onBack(); }}
       />
+
+      {/* Error: Nombre faltante en S3 */}
+      <ConfirmModal 
+        isOpen={modalOpen === 'ERROR_LLEVAR'}
+        title="Faltan Datos"
+        message="Para órdenes 'Para Llevar' el nombre del cliente es obligatorio. [S3]"
+        type="danger"
+        confirmText="Regresar"
+        onConfirm={() => setModalOpen('NONE')}
+        onCancel={() => setModalOpen('NONE')}
+      />
+
     </div>
   );
 };
