@@ -4,7 +4,7 @@ interface Props {
   title: string;
   message: string;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void; // Ahora es opcional
   confirmText?: string;
   type?: 'danger' | 'success' | 'info';
 }
@@ -20,10 +20,13 @@ export const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, conf
         <h2 className="text-xl font-black uppercase italic mb-2 border-b-2 border-gray-800 pb-1">{title}</h2>
         <p className="text-xs font-bold text-gray-600 mb-6 uppercase tracking-tight">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-800 font-black text-[10px] uppercase hover:bg-gray-100">
-            Cancelar
-          </button>
-          <button onClick={onConfirm} className={`flex-1 py-3 font-black text-[10px] uppercase ${buttonStyle}`}>
+          {/* Solo mostramos cancelar si se pasó la función onCancel */}
+          {onCancel && (
+            <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-800 font-black text-[10px] uppercase hover:bg-gray-100">
+              Cancelar
+            </button>
+          )}
+          <button onClick={onConfirm} className={`flex-1 py-3 font-black text-[10px] uppercase ${buttonStyle} hover:opacity-90`}>
             {confirmText}
           </button>
         </div>

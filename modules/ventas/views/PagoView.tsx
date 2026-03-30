@@ -1,159 +1,110 @@
-// src/modules/ventas/views/PedidoView.tsx
+// src/modules/ventas/views/PagoView.tsx
 import { useState } from 'react';
-import { PRODUCTOS_MOCK } from '../mocks/productos.mock';
-import { MESAS_MOCK } from '../mocks/mesas.mock';
-import { PEDIDO_ACTIVO_MOCK } from '../mocks/pedido.mock';
-import { ProductCard } from '../components/ProductCard';
-import { PedidoList } from '../components/PedidoList';
-import { OrderSummary } from '../components/OrderSummary';
-import { ConfirmModal } from '../components/ConfirmModal'; // Tu componente personalizado
-import { usePedido } from '../hooks/usePedido';
+import { CUENTA_ACTIVA_MOCK } from '../mocks/cuenta.mock';
+import { AccountSummary } from '../components/AccountSummary';
+import { PaymentMethods } from '../components/PaymentMethods';
+import { CFDIDialog } from '../components/CFDIDialog';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { usePago } from '../hooks/usePago';
+import { DatosFiscales } from '../types/pago';
 
 interface Props {
-  mesaId: number | null;
   onBack: () => void;
+  onFinish: () => void;
 }
 
-export const PedidoView = ({ mesaId, onBack }: Props) => {
-  const initialPedido = (mesaId === 2) ? PEDIDO_ACTIVO_MOCK : undefined;
+export const PagoView = ({ onBack, onFinish }: Props) => {
+  const { cuenta, aplicarDescuentoLealtad, registrarPago, procesarFacturacion, finalizarCierre } = usePago(CUENTA_ACTIVA_MOCK);
 
-  const { 
-    detalles, agregarProducto, eliminarProducto, actualizarNota, 
-    actualizarCantidad, anularPedido, total, enviarPedido 
-  } = usePedido(mesaId || 0, 1, initialPedido);
+  const [isCFDIOpen, setIsCFDIOpen] = useState(false);
+  const [modalType, setModalType] = useState<'NONE' | 'SUCCESS_PAGO' | 'SUCCESS_CIERRE' | 'SUCCESS_FACTURA'>('NONE');
 
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
-  const [nombreCliente, setNombreCliente] = useState('');
-  
-  // ESTADO PARA CONTROLAR QUÉ MODAL MOSTRAR
-  const [modalOpen, setModalOpen] = useState<'NONE' | 'CONFIRM_ENVIO' | 'CONFIRM_ANULAR' | 'SUCCESS' | 'ERROR_LLEVAR'>('NONE');
-
-  const categorias = ['Todas', ...new Set(PRODUCTOS_MOCK.map(p => p.categoria))];
-
-  // Acción: Confirmar Envío (Paso 8)
-  const handlePreConfirmar = () => {
-    // Validación S3: Nombre obligatorio para llevar
-    if (!mesaId && !nombreCliente.trim()) {
-      setModalOpen('ERROR_LLEVAR');
-      return;
-    }
-    setModalOpen('CONFIRM_ENVIO');
+  const handlePayment = (metodo: 'EFECTIVO' | 'TARJETA') => {
+    registrarPago(metodo, cuenta.saldoPendiente);
+    setModalType('SUCCESS_PAGO');
   };
 
-  const onConfirmarEnvio = () => {
-    enviarPedido();
-    setModalOpen('SUCCESS');
+  const handleFinish = () => {
+    finalizarCierre();
+    setModalType('SUCCESS_CIERRE');
   };
 
-  const onConfirmarAnulacion = () => {
-    anularPedido();
-    onBack();
+  const handleConfirmFactura = (data: DatosFiscales) => {
+    procesarFacturacion(data);
+    setIsCFDIOpen(false);
+    setModalType('SUCCESS_FACTURA');
   };
 
   return (
-    <div className="flex h-screen bg-gray-300 overflow-hidden font-sans border-4 border-gray-900 text-gray-900">
-      
-      <div className="w-2/3 flex flex-col border-r-4 border-gray-800 bg-white">
-        <nav className="p-4 bg-gray-900 text-white flex justify-between items-center">
-          <button onClick={() => setModalOpen('CONFIRM_ANULAR')} className="text-[10px] font-black border border-white px-3 py-1 uppercase hover:bg-white hover:text-black">
-            ← ANULAR / VOLVER
+    <div className="flex h-screen bg-gray-300 overflow-hidden font-sans border-4 border-black text-black">
+      <div className="w-1/2 flex flex-col border-r-4 border-black bg-white p-6">
+        <header className="mb-6 flex justify-between items-center border-b-4 border-black pb-4">
+          <h1 className="text-2xl font-black uppercase italic leading-none text-gray-900">Liquidación</h1>
+          <button onClick={onBack} className="text-[10px] font-black border-2 border-black px-4 py-2 uppercase hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            ← Volver
           </button>
-          <div className="text-right">
-            <span className="font-black text-xl italic uppercase block leading-none">
-              {mesaId ? `Mesa ${mesaId}` : "Orden Para Llevar (S3)"}
-            </span>
-          </div>
-        </nav>
+        </header>
 
-        {!mesaId && (
-          <div className="p-4 bg-yellow-100 border-b-4 border-gray-800">
-            <label className="text-[10px] font-black block mb-1 uppercase text-gray-700">Nombre del Cliente (*)</label>
-            <input 
-              type="text" 
-              value={nombreCliente}
-              onChange={(e) => setNombreCliente(e.target.value)}
-              className="w-full p-3 border-4 border-gray-800 bg-white font-mono text-sm focus:bg-yellow-50 outline-none uppercase font-bold"
-              placeholder="CAMPO OBLIGATORIO"
-            />
-          </div>
-        )}
+        <AccountSummary cuenta={cuenta} />
 
-        <div className="flex bg-gray-100 border-b-2 border-gray-800 overflow-x-auto">
-          {categorias.map(cat => (
-            <button key={cat} onClick={() => setCategoriaSeleccionada(cat)}
-              className={`px-6 py-3 text-[10px] font-black uppercase border-r border-gray-800 transition-colors
-                ${categoriaSeleccionada === cat ? 'bg-gray-800 text-white' : 'bg-white text-gray-800 hover:bg-gray-200'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1 p-4 overflow-y-auto grid grid-cols-2 xl:grid-cols-3 gap-4 bg-gray-50">
-          {PRODUCTOS_MOCK.filter(p => categoriaSeleccionada === 'Todas' || p.categoria === categoriaSeleccionada).map(prod => (
-            <ProductCard key={prod.id} producto={prod} onAdd={agregarProducto} />
-          ))}
+        <div className={`mt-6 p-4 border-4 border-black ${cuenta.saldoPendiente === 0 ? 'bg-green-100' : 'bg-yellow-50'}`}>
+          <p className="text-[10px] font-black uppercase mb-1">Estatus del Saldo:</p>
+          <p className="text-2xl font-mono font-black italic">
+            {cuenta.saldoPendiente === 0 ? "✓ PAGADA" : `$${cuenta.saldoPendiente.toFixed(2)}`}
+          </p>
         </div>
       </div>
 
-      <div className="w-1/3 flex flex-col bg-white shadow-2xl">
-        <PedidoList 
-          detalles={detalles} 
-          onRemoveItem={eliminarProducto} 
-          onUpdateQty={actualizarCantidad} 
-          onUpdateNota={actualizarNota} 
-        />
-        
-        <OrderSummary 
-          total={total} 
-          onConfirm={handlePreConfirmar} 
-          onCancel={() => setModalOpen('CONFIRM_ANULAR')} 
-          disabled={detalles.length === 0} 
-        />
+      <div className="w-1/2 flex flex-col bg-gray-100 p-8 justify-between">
+        <div className="space-y-6">
+          <PaymentMethods 
+            onSelectMethod={handlePayment} 
+            onApplyLoyalty={aplicarDescuentoLealtad} 
+            hasLoyaltyApplied={cuenta.descuento > 0} 
+          />
+          <button 
+            onClick={() => setIsCFDIOpen(true)}
+            className="w-full py-4 border-4 border-black bg-white font-black uppercase text-sm shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 active:shadow-none transition-all"
+          >
+            Emitir Factura CFDI (S3)
+          </button>
+        </div>
+
+        <button 
+          onClick={handleFinish}
+          disabled={cuenta.saldoPendiente > 0}
+          className={`w-full py-6 font-black text-2xl uppercase border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]
+            ${cuenta.saldoPendiente > 0 ? 'bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-none' : 'bg-black text-white hover:bg-gray-800'}`}
+        >
+          {cuenta.saldoPendiente > 0 ? "Saldo Pendiente" : "Cerrar Mesa (Paso 10)"}
+        </button>
       </div>
 
-      {/* --- MODALES PRESENTABLES (SIN ALERT/CONFIRM DE SISTEMA) --- */}
+      <CFDIDialog isOpen={isCFDIOpen} onClose={() => setIsCFDIOpen(false)} onConfirm={handleConfirmFactura} />
 
-      {/* Confirmar Envío a Cocina */}
+      {/* MODALES PERSONALIZADOS */}
       <ConfirmModal 
-        isOpen={modalOpen === 'CONFIRM_ENVIO'}
-        title="Enviar a Cocina"
-        message="¿Desea enviar esta comanda digital a la cocina? [Paso 8]"
-        onConfirm={onConfirmarEnvio}
-        onCancel={() => setModalOpen('NONE')}
+        isOpen={modalType === 'SUCCESS_PAGO'} 
+        title="Pago Exitoso" 
+        message="Se ha registrado el pago correctamente. El saldo ha sido actualizado."
+        onConfirm={() => setModalType('NONE')} 
+        onCancel={() => setModalType('NONE')} 
       />
 
-      {/* Confirmar Anulación */}
       <ConfirmModal 
-        isOpen={modalOpen === 'CONFIRM_ANULAR'}
-        title="Anular Pedido"
-        message="¿Está seguro? Se borrarán todos los productos seleccionados. [S2]"
-        type="danger"
-        confirmText="Sí, Anular"
-        onConfirm={onConfirmarAnulacion}
-        onCancel={() => setModalOpen('NONE')}
+        isOpen={modalType === 'SUCCESS_FACTURA'} 
+        title="Factura Generada" 
+        message="El CFDI ha sido timbrado y enviado al correo del cliente exitosamente."
+        onConfirm={() => setModalType('NONE')} 
       />
 
-      {/* Éxito al Enviar */}
       <ConfirmModal 
-        isOpen={modalOpen === 'SUCCESS'}
-        title="¡Éxito!"
-        message="El pedido ha sido enviado exitosamente a cocina. [Paso 9]"
-        confirmText="Entendido"
-        onConfirm={() => { setModalOpen('NONE'); onBack(); }}
-        onCancel={() => { setModalOpen('NONE'); onBack(); }}
+        isOpen={modalType === 'SUCCESS_CIERRE'} 
+        title="Mesa Liberada" 
+        message="La cuenta se ha cerrado y la mesa está lista para el siguiente cliente."
+        onConfirm={onFinish} 
+        onCancel={onFinish} 
       />
-
-      {/* Error: Nombre faltante en S3 */}
-      <ConfirmModal 
-        isOpen={modalOpen === 'ERROR_LLEVAR'}
-        title="Faltan Datos"
-        message="Para órdenes 'Para Llevar' el nombre del cliente es obligatorio. [S3]"
-        type="danger"
-        confirmText="Regresar"
-        onConfirm={() => setModalOpen('NONE')}
-        onCancel={() => setModalOpen('NONE')}
-      />
-
     </div>
   );
 };

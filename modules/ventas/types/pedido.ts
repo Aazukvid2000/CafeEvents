@@ -17,6 +17,7 @@ export interface DetallePedido {
 export interface Pedido {
   id?: number;
   mesaId: number;           // Relación con Mesa [cite: 18]
+  nombreCliente?: string;
   usuarioId: number;        // ID del Mesero (Actor principal) [cite: 18]
   estado: 'PENDIENTE' | 'PREPARANDO' | 'LISTO' | 'ENTREGADO' | 'CANCELADO'; 
   total: number;
