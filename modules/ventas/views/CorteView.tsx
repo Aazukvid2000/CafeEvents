@@ -26,12 +26,23 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
       ejecutarCierre();
       setModalState('SUCCESS');
     } catch (e) {
-      setModalState('E3_FALLA'); // Manejo de E3
+      setModalState('E3_FALLA'); 
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-400 p-12 font-sans text-gray-900">
+      
+      {/* BOTÓN DE RETORNO AL PANEL (Agregado) */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <button 
+          onClick={onBack}
+          className="bg-gray-100 border-4 border-gray-900 px-6 py-2 font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-200 active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+        >
+          ← CANCELAR Y VOLVER AL PANEL
+        </button>
+      </div>
+
       <CorteForm 
         corte={corte} 
         efectivoReal={efectivoReal} 
@@ -41,18 +52,16 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
 
       {/* --- MODALES DE EXCEPCIONES --- */}
 
-      {/* E1: Diferencia Significativa */}
       <ConfirmModal 
         isOpen={modalState === 'E1_DIFERENCIA'}
         title="⚠️ Diferencia Crítica"
         message={`Se detectó un descuadre mayor al permitido ($${(efectivoReal - corte.ventasEfectivo).toFixed(2)}). El supervisor debe autorizar con su clave.`}
         type="danger"
         confirmText="Solicitar Autorización"
-        onConfirm={() => setModalState('CONFIRM')} // En un caso real pediría clave
+        onConfirm={() => setModalState('CONFIRM')} 
         onCancel={() => setModalState('NONE')}
       />
 
-      {/* E2: Cuentas Pendientes */}
       <ConfirmModal 
         isOpen={modalState === 'E2_PENDIENTES'}
         title="🚫 Cierre Bloqueado"
@@ -62,7 +71,6 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
         onConfirm={onBack}
       />
 
-      {/* E3: Falla de Sistema */}
       <ConfirmModal 
         isOpen={modalState === 'E3_FALLA'}
         title="❌ Error de Red"
@@ -73,7 +81,6 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
         onCancel={() => setModalState('NONE')}
       />
 
-      {/* Flujo Normal: Éxito */}
       <ConfirmModal 
         isOpen={modalState === 'SUCCESS'}
         title="Turno Finalizado"
@@ -81,7 +88,6 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
         onConfirm={onFinish}
       />
 
-      {/* Confirmación Normal */}
       <ConfirmModal 
         isOpen={modalState === 'CONFIRM'}
         title="Confirmar Cierre"
