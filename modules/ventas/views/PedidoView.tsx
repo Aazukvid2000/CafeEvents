@@ -78,7 +78,7 @@ export const PedidoView = ({ mesaId, pedidoId, onBack }: Props) => {
               className="flex items-center gap-2 text-[8px] lg:text-[9px] font-black border border-white/20 px-3 py-1.5 uppercase hover:bg-white hover:text-[#1a241d] transition-all tracking-widest w-fit"
             >
               <ArrowLeft size={12} />
-              <span className="hidden sm:inline">Regresar</span>
+              <span className="hidden sm:inline">Regresar / Anular pedido</span>
             </button>
             <div className="flex items-baseline gap-2 lg:gap-3">
                <h2 className="font-headline text-2xl lg:text-4xl italic leading-tight">

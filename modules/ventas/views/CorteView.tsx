@@ -1,8 +1,9 @@
-// src/modules/ventas/views/CorteView.tsx
+'use client';
 import { useState } from 'react';
 import { CorteForm } from '../components/CorteForm';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useCorte } from '../hooks/useCorte';
+import { ArrowLeft, Wallet } from 'lucide-react';
 
 export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: () => void }) => {
   const { corte, efectivoReal, setEfectivoReal, validarCorte, ejecutarCierre } = useCorte();
@@ -31,32 +32,54 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
   };
 
   return (
-    <div className="min-h-screen bg-gray-400 p-12 font-sans text-gray-900">
+    <div className="w-full bg-[#fcf9f4] font-body text-[#1a3d2e] p-4 lg:p-6 animate-in fade-in duration-700">
       
-      {/* BOTÓN DE RETORNO AL PANEL (Agregado) */}
-      <div className="max-w-2xl mx-auto mb-6">
+      {/* HEADER DE CIERRE - Reducido margen inferior y padding */}
+      <div className="max-w-5xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-1.5 bg-[#1a3d2e] rounded-lg text-white">
+              <Wallet size={18} />
+            </div>
+            <span className="label-caps text-[#C5A059] text-[10px]">Auditoría de Turno</span>
+          </div>
+          <h1 className="serif-display text-4xl lg:text-5xl">Corte de Caja</h1>
+          <p className="text-[#434843]/60 text-[11px] font-medium uppercase tracking-widest">
+            ID de Sesión: #POS-2026-0042
+          </p>
+        </div>
+
         <button 
           onClick={onBack}
-          className="bg-gray-100 border-4 border-gray-900 px-6 py-2 font-black text-[10px] uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-200 active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+          className="group flex items-center gap-2 text-[9px] font-black text-[#1a3d2e] border border-[#1a3d2e]/20 px-4 py-2 rounded-full uppercase tracking-widest hover:bg-[#1a3d2e] hover:text-white transition-all duration-300"
         >
-          ← CANCELAR Y VOLVER AL PANEL
+          <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+          Cancelar y Volver
         </button>
       </div>
 
-      <CorteForm 
-        corte={corte} 
-        efectivoReal={efectivoReal} 
-        onChangeEfectivo={setEfectivoReal} 
-        onConfirm={handleIntentarCierre} 
-      />
+      {/* CONTENIDO PRINCIPAL - Max width extendido y padding ajustado */}
+      <div className="max-w-5xl mx-auto bg-white rounded-[2rem] border border-[#1a3d2e]/5 shadow-sm p-6 lg:p-8">
+        <CorteForm 
+          corte={corte} 
+          efectivoReal={efectivoReal} 
+          onChangeEfectivo={setEfectivoReal} 
+          onConfirm={handleIntentarCierre} 
+        />
+      </div>
 
-      {/* --- MODALES DE EXCEPCIONES --- */}
+      <div className="max-w-5xl mx-auto mt-6 text-center">
+        <p className="label-caps opacity-30 text-[8px] tracking-[0.3em]">
+          Asegúrese de contar el efectivo físico dos veces antes de confirmar el arqueo
+        </p>
+      </div>
+
+      {/* --- MODALES --- */}
 
       <ConfirmModal 
         isOpen={modalState === 'E1_DIFERENCIA'}
-        title="⚠️ Diferencia Crítica"
-        message={`Se detectó un descuadre mayor al permitido ($${(efectivoReal - corte.ventasEfectivo).toFixed(2)}). El supervisor debe autorizar con su clave.`}
-        type="danger"
+        title="Diferencia Crítica"
+        message={`Se detectó un descuadre de ($${Math.abs(efectivoReal - corte.ventasEfectivo).toFixed(2)}). Se requiere autorización.`}
         confirmText="Solicitar Autorización"
         onConfirm={() => setModalState('CONFIRM')} 
         onCancel={() => setModalState('NONE')}
@@ -64,18 +87,16 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
 
       <ConfirmModal 
         isOpen={modalState === 'E2_PENDIENTES'}
-        title="🚫 Cierre Bloqueado"
-        message="No se puede realizar el corte porque aún hay mesas con consumos activos o sin liquidar. Cierre todas las cuentas primero."
-        type="danger"
-        confirmText="Ir a Mesas"
+        title="Cierre Bloqueado"
+        message="Existen mesas activas. Cierre todas las cuentas primero."
+        confirmText="Regresar a Mesas"
         onConfirm={onBack}
       />
 
       <ConfirmModal 
         isOpen={modalState === 'E3_FALLA'}
-        title="❌ Error de Red"
-        message="No se pudo comunicar con el servidor para guardar el folio de corte. Verifique su conexión y reintente."
-        type="danger"
+        title="Falla de Conexión"
+        message="Error al sincronizar con el servidor. Verifique su red."
         confirmText="Reintentar"
         onConfirm={finalizarTodo}
         onCancel={() => setModalState('NONE')}
@@ -83,15 +104,17 @@ export const CorteView = ({ onBack, onFinish }: { onBack: () => void, onFinish: 
 
       <ConfirmModal 
         isOpen={modalState === 'SUCCESS'}
-        title="Turno Finalizado"
-        message="Corte guardado correctamente. Imprimiendo ticket de arqueo..."
+        title="Corte Guardado"
+        message="Turno finalizado con éxito. Generando ticket de arqueo..."
+        confirmText="Finalizar Operación"
         onConfirm={onFinish}
       />
 
       <ConfirmModal 
         isOpen={modalState === 'CONFIRM'}
-        title="Confirmar Cierre"
-        message="¿Desea finalizar el turno con el conteo actual?"
+        title="Confirmar Arqueo"
+        message="¿Los datos son correctos? Esta acción cerrará la terminal definitivamente."
+        confirmText="Confirmar Cierre"
         onConfirm={finalizarTodo}
         onCancel={() => setModalState('NONE')}
       />
