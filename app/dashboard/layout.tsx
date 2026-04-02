@@ -5,7 +5,8 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import {
   Clock4, Armchair, Timer, Bell,
   LogOut, UtensilsCrossed, Search, ArrowLeft,
-  UserCircle2, ShoppingBag, LayoutDashboard, Wallet, Utensils
+  UserCircle2, ShoppingBag, LayoutDashboard, Wallet, Utensils, CalendarDays, ClipboardList,
+  AlertTriangle, CheckCircle
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const currentView = searchParams.get('view');
 
-  // Estados
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -23,14 +23,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // DETECCIÓN DINÁMICA DEL ROL BASADA EN LA URL
-  const userRole = pathname.includes('/dashboard/cajero') ? 'cajero' : 'mesero';
-  const isCajero = userRole === 'cajero';
+  // DETECCIÓN DINÁMICA DEL ROL
+  const userRole = pathname.includes('/dashboard/cajero') 
+    ? 'cajero' 
+    : pathname.includes('/dashboard/chef') 
+      ? 'chef' 
+      : 'mesero';
 
-  const notifications = [
-    { id: 1, type: 'ready', mesa: 'Mesa 4', pedido: '#1204', tiempo: 'Hace 2 min' },
-    { id: 2, type: 'ready', mesa: 'Mostrador', pedido: '#1207', tiempo: 'Hace 5 min' },
-  ];
+  const isCajero = userRole === 'cajero';
+  const isChef = userRole === 'chef';
+
+  // NOTIFICACIONES SEGÚN ROL
+  const notificationsByRole = {
+    mesero: [
+      { id: 1, mesa: 'Mesa 4', text: 'Pedido #1204 listo.', icon: UtensilsCrossed, color: 'text-blue-600' },
+    ],
+    chef: [
+      { id: 1, mesa: 'Inventario', text: 'Stock bajo en Salmón Ahumado.', icon: AlertTriangle, color: 'text-amber-600' },
+      { id: 2, mesa: 'Propuesta #42', text: 'Receta autorizada por Admin.', icon: CheckCircle, color: 'text-emerald-600' },
+    ],
+    cajero: [] // El cajero no tiene notificaciones según requerimiento previo
+  };
+
+  const notifications = notificationsByRole[userRole] || [];
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,10 +75,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       { name: 'Mesas Activas', href: '/dashboard/cajero?view=mesas', icon: Utensils, viewKey: 'mesas' },
       { name: 'Pedidos para Llevar', href: '/dashboard/cajero?view=llevar', icon: ShoppingBag, viewKey: 'llevar' },
       { name: 'Corte de Caja', href: '/dashboard/cajero?view=corte', icon: Wallet, viewKey: 'corte' },
+    ],
+    chef: [
+      { name: 'Panel de Control', href: '/dashboard/chef?view=resumen', icon: LayoutDashboard, viewKey: 'resumen' },
+      { name: 'Catálogo de Recetas', href: '/dashboard/chef?view=recetas', icon: UtensilsCrossed, viewKey: 'recetas' },
+      { name: 'Menús de Eventos', href: '/dashboard/chef?view=eventos', icon: CalendarDays, viewKey: 'eventos' },
+      { name: 'Mis Propuestas', href: '/dashboard/chef?view=propuestas', icon: ClipboardList, viewKey: 'propuestas' }
     ]
   };
 
-  const currentMenu = menuConfig[userRole as keyof typeof menuConfig] || [];
+  const currentMenu = menuConfig[userRole] || [];
   const isPedidoView = currentView === 'pedido';
 
   return (
@@ -82,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <input
                   autoFocus
                   type="text"
-                  placeholder="ID DE PEDIDO..."
+                  placeholder="BUSCAR PEDIDO O RECETA..."
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
                   className="w-full bg-[#334537]/5 border-none rounded-full py-2 px-4 text-sm font-body text-[#334537] focus:ring-2 focus:ring-[#334537]/10 placeholder:text-[#334537]/20 transition-all uppercase tracking-widest"
@@ -101,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Search className="absolute left-4 text-[#334537]/30 group-focus-within:text-[#334537] transition-colors" size={16} />
                   <input
                     type="text"
-                    placeholder="ID DE PEDIDO..."
+                    placeholder={isChef ? "BUSCAR RECETA..." : "ID DE PEDIDO..."}
                     value={searchId}
                     onChange={(e) => setSearchId(e.target.value)}
                     className="w-full bg-[#334537]/5 border-none rounded-full py-2 pl-11 pr-4 text-xs font-body text-[#334537] focus:ring-2 focus:ring-[#334537]/10 placeholder:text-[#334537]/20 transition-all uppercase tracking-widest"
@@ -110,14 +131,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
 
               <div className="flex items-center gap-1 lg:gap-6">
-                <button
-                  onClick={() => setIsMobileSearchOpen(true)}
-                  className="md:hidden p-2 text-[#334537]/60"
-                >
+                <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-2 text-[#334537]/60">
                   <Search size={20} />
                 </button>
 
-                {/* Notificaciones - Solo se muestran si NO es cajero */}
+                {/* Notificaciones (Solo si no es cajero y hay notificaciones) */}
                 {!isCajero && (
                   <div className="relative" ref={notificationsRef}>
                     <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2 rounded-full transition-all relative ${isNotificationsOpen ? 'bg-[#334537] text-white' : 'text-[#334537]/60'}`}>
@@ -128,18 +146,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {isNotificationsOpen && (
                       <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-[#334537]/10 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="px-5 py-4 bg-[#fcf9f4] border-b border-[#334537]/5 flex justify-between items-center">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#334537]">Notificaciones</h3>
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#334537]">Avisos del Sistema</h3>
                         </div>
                         <div className="max-h-[400px] overflow-y-auto">
-                          {notifications.map((n) => (
-                            <button key={n.id} className="w-full p-4 flex items-start gap-4 border-b border-[#f6f3ee] hover:bg-[#fcf9f4] transition-all text-left">
-                              <div className="mt-1 p-2 rounded-lg bg-[#d3e8d5] text-[#334537]"><UtensilsCrossed size={16} /></div>
-                              <div className="flex-1">
-                                <p className="font-headline text-base italic text-[#334537]">{n.mesa}</p>
-                                <p className="text-xs text-[#434843]">Pedido <span className="font-bold">{n.pedido}</span> listo.</p>
-                              </div>
-                            </button>
-                          ))}
+                          {notifications.length > 0 ? (
+                            notifications.map((n) => (
+                              <button key={n.id} className="w-full p-4 flex items-start gap-4 border-b border-[#f6f3ee] hover:bg-[#fcf9f4] transition-all text-left">
+                                <div className={`mt-1 p-2 rounded-lg bg-[#f6f3ee] ${n.color}`}><n.icon size={16} /></div>
+                                <div className="flex-1">
+                                  <p className="font-headline text-base italic text-[#334537]">{n.mesa}</p>
+                                  <p className="text-xs text-[#434843]">{n.text}</p>
+                                </div>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="p-8 text-center text-xs italic text-[#434843]/50">No hay avisos nuevos</div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -162,10 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <div className="absolute right-0 mt-3 w-56 bg-white border border-[#334537]/10 shadow-2xl rounded-2xl p-2 animate-in fade-in zoom-in-95 duration-200">
                       <div className="px-4 py-3 border-b border-[#f6f3ee] mb-1">
                         <p className="text-[10px] font-black uppercase tracking-widest text-[#334537]/40 leading-none mb-1">
-                          {isCajero ? 'Cajero Activo' : 'Mesero Activo'}
+                          {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Activo
                         </p>
                         <p className="font-headline text-base italic text-[#334537]">
-                          {isCajero ? 'Caja Central' : 'Pedro Pascal'}
+                          {isChef ? 'Chef Ejecutivo' : isCajero ? 'Caja Central' : 'Pedro Pascal'}
                         </p>
                       </div>
                       <button onClick={() => router.push('/login')} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#ba1a1a] hover:bg-[#ba1a1a]/5 rounded-xl transition-all font-bold">
@@ -190,21 +212,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 Acceso Autorizado
               </p>
               <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full animate-pulse ${isCajero ? 'bg-[#C5A059]' : 'bg-[#1a3d2e]'}`} />
+                <div className={`h-2 w-2 rounded-full animate-pulse ${isChef ? 'bg-emerald-600' : isCajero ? 'bg-[#C5A059]' : 'bg-[#1a3d2e]'}`} />
                 <span className={`font-label text-[11px] font-black uppercase tracking-[0.15em] 
-        ${isCajero ? 'text-[#C5A059]' : 'text-[#1a3d2e]'}`}>
+                  ${isChef ? 'text-emerald-800' : isCajero ? 'text-[#C5A059]' : 'text-[#1a3d2e]'}`}>
                   Módulo {userRole}
                 </span>
               </div>
-              {/* Línea decorativa sutil */}
               <div className="h-[1px] w-12 bg-[#1a3d2e]/10 mt-2" />
             </div>
           </div>
 
           <nav className="flex-1 space-y-1">
             {currentMenu.map((item) => {
-              const defaultView = isCajero ? 'ventas' : 'mapa';
-              const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultView);
+              const defaultViews = { chef: 'resumen', cajero: 'ventas', mesero: 'mapa' };
+              const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultViews[userRole]);
               const Icon = item.icon;
               return (
                 <Link key={item.name} href={item.href}
@@ -225,8 +246,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {!isPedidoView && (
           <nav className="lg:hidden fixed bottom-0 w-full bg-white border-t border-[#334537]/10 px-6 h-16 flex items-center justify-around z-50">
             {currentMenu.map((item) => {
-              const defaultView = isCajero ? 'ventas' : 'mapa';
-              const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultView);
+              const defaultViews = { chef: 'resumen', cajero: 'ventas', mesero: 'mapa' };
+              const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultViews[userRole]);
               const Icon = item.icon;
               return (
                 <Link key={item.name} href={item.href} className={`flex flex-col items-center gap-1 ${isActive ? "text-[#334537]" : "text-[#4a5d4e]/40"}`}>
