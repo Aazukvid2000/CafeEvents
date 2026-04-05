@@ -6,7 +6,9 @@ import {
   Clock4, Armchair, Timer, Bell,
   LogOut, UtensilsCrossed, Search, ArrowLeft,
   UserCircle2, ShoppingBag, LayoutDashboard, Wallet, Utensils, CalendarDays, ClipboardList,
-  AlertTriangle, CheckCircle
+  AlertTriangle, CheckCircle, FileBarChart, Receipt, BookOpen, SearchCheck,
+  CreditCard, BarChart3, CalendarCheck, FileSpreadsheet, BellRing,
+  Zap, CalendarClock, ShieldCheck, Settings, Activity
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -23,17 +25,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // DETECCIÓN DINÁMICA DEL ROL
-  const userRole = pathname.includes('/dashboard/cajero') 
-    ? 'cajero' 
-    : pathname.includes('/dashboard/chef') 
-      ? 'chef' 
-      : 'mesero';
+  // DETECCIÓN DINÁMICA DEL ROL (INCLUYE ADMINISTRADOR)
+  const userRole = pathname.includes('/dashboard/administrador') 
+    ? 'administrador'
+    : pathname.includes('/dashboard/cajero') 
+      ? 'cajero' 
+      : pathname.includes('/dashboard/chef') 
+        ? 'chef' 
+        : pathname.includes('/dashboard/contador')
+          ? 'contador'
+          : pathname.includes('/dashboard/gerente')
+            ? 'gerente'
+            : 'mesero';
 
-  const isCajero = userRole === 'cajero';
   const isChef = userRole === 'chef';
+  const isCajero = userRole === 'cajero';
+  const isContador = userRole === 'contador';
+  const isGerente = userRole === 'gerente';
+  const isAdmin = userRole === 'administrador';
 
-  // NOTIFICACIONES SEGÚN ROL
+  // NOTIFICACIONES BASADAS EN CASOS DE USO [cite: 35, 51, 81, 148]
   const notificationsByRole = {
     mesero: [
       { id: 1, mesa: 'Mesa 4', text: 'Pedido #1204 listo.', icon: UtensilsCrossed, color: 'text-blue-600' },
@@ -42,7 +53,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       { id: 1, mesa: 'Inventario', text: 'Stock bajo en Salmón Ahumado.', icon: AlertTriangle, color: 'text-amber-600' },
       { id: 2, mesa: 'Propuesta #42', text: 'Receta autorizada por Admin.', icon: CheckCircle, color: 'text-emerald-600' },
     ],
-    cajero: [] // El cajero no tiene notificaciones según requerimiento previo
+    contador: [
+      { id: 1, mesa: 'Proveedores', text: 'Nueva alerta de pago: Insumos Almacén.', icon: CreditCard, color: 'text-blue-600' },
+      { id: 2, mesa: 'Corte de Caja', text: 'Diferencia significativa detectada en Turno #88.', icon: BarChart3, color: 'text-red-600' },
+    ],
+    gerente: [
+      { id: 1, mesa: 'Alerta Saldo', text: 'Evento "Boda" requiere pago de saldo 50% hoy.', icon: Zap, color: 'text-orange-600' },
+      { id: 2, mesa: 'Nueva Solicitud', text: 'Cotización pendiente de revisar.', icon: FileSpreadsheet, color: 'text-blue-600' },
+    ],
+    administrador: [
+      { id: 1, mesa: 'Autorización', text: 'Nueva propuesta de Menú de Boda pendiente.', icon: ClipboardList, color: 'text-amber-600' }, // [cite: 81, 91]
+      { id: 2, mesa: 'Incidencia', text: 'Diferencia significativa en Caja (Turno #89).', icon: ShieldCheck, color: 'text-red-600' }, // [cite: 51]
+      { id: 3, mesa: 'Sistema', text: 'Corte de caja irreversible solicitado.', icon: Activity, color: 'text-purple-600' } // [cite: 35]
+    ],
+    cajero: []
   };
 
   const notifications = notificationsByRole[userRole] || [];
@@ -81,6 +105,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       { name: 'Catálogo de Recetas', href: '/dashboard/chef?view=recetas', icon: UtensilsCrossed, viewKey: 'recetas' },
       { name: 'Menús de Eventos', href: '/dashboard/chef?view=eventos', icon: CalendarDays, viewKey: 'eventos' },
       { name: 'Mis Propuestas', href: '/dashboard/chef?view=propuestas', icon: ClipboardList, viewKey: 'propuestas' }
+    ],
+    contador: [
+      { name: 'Reportes Financieros', href: '/dashboard/contador?view=reportes', icon: FileBarChart, viewKey: 'reportes' },
+      { name: 'Pagos a Proveedores', href: '/dashboard/contador?view=pagos', icon: Receipt, viewKey: 'pagos' },
+      { name: 'Libro de Gastos', href: '/dashboard/contador?view=gastos', icon: BookOpen, viewKey: 'gastos' },
+      { name: 'Auditoría de Ventas', href: '/dashboard/contador?view=auditoria', icon: SearchCheck, viewKey: 'auditoria' }
+    ],
+    gerente: [
+      { name: 'Reservaciones', href: '/dashboard/gerente?view=reservas', icon: CalendarCheck, viewKey: 'reservas' },
+      { name: 'Cotizaciones', href: '/dashboard/gerente?view=cotizaciones', icon: FileSpreadsheet, viewKey: 'cotizaciones' },
+      { name: 'Métricas y Rentabilidad', href: '/dashboard/gerente?view=metricas', icon: BarChart3, viewKey: 'metricas' },
+      { name: 'Configurar Alertas', href: '/dashboard/gerente?view=facturacion', icon: BellRing, viewKey: 'facturacion' }
+    ],
+    administrador: [
+      { name: 'Panel de Control', href: '/dashboard/administrador?view=resumen', icon: LayoutDashboard, viewKey: 'resumen' },
+      { name: 'Autorizaciones', href: '/dashboard/administrador?view=autorizaciones', icon: CheckCircle, viewKey: 'autorizaciones' }, // [cite: 84]
+      { name: 'Gestión de Menú', href: '/dashboard/administrador?view=catalogo', icon: UtensilsCrossed, viewKey: 'catalogo' }, // [cite: 87]
+      { name: 'Incidencias y Log', href: '/dashboard/administrador?view=auditoria', icon: ClipboardList, viewKey: 'auditoria' }, // [cite: 18]
+      { name: 'Configuración Alertas', href: '/dashboard/administrador?view=alertas', icon: BellRing, viewKey: 'alertas' } // [cite: 209]
     ]
   };
 
@@ -94,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className={`fixed top-0 w-full z-50 bg-[#fcf9f4]/70 backdrop-blur-xl border-b border-[#334537]/5 transition-all ${isPedidoView ? 'h-0 overflow-hidden lg:h-20' : 'h-16 lg:h-20'}`}>
         <div className="flex justify-between items-center px-4 lg:px-8 h-full w-full max-w-screen-2xl mx-auto">
 
-          {isMobileSearchOpen ? (
+          {isMobileSearchOpen && !isContador ? (
             <form onSubmit={handleSearch} className="flex items-center w-full gap-3 animate-in slide-in-from-top-2 duration-200">
               <button type="button" onClick={() => setIsMobileSearchOpen(false)} className="text-[#334537]">
                 <ArrowLeft size={20} />
@@ -103,7 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <input
                   autoFocus
                   type="text"
-                  placeholder="BUSCAR PEDIDO O RECETA..."
+                  placeholder="BUSCAR TRANSACCIÓN O PROPUESTA..."
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
                   className="w-full bg-[#334537]/5 border-none rounded-full py-2 px-4 text-sm font-body text-[#334537] focus:ring-2 focus:ring-[#334537]/10 placeholder:text-[#334537]/20 transition-all uppercase tracking-widest"
@@ -118,57 +161,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center gap-4 lg:gap-8 flex-1">
                 <h1 className="font-headline text-xl lg:text-2xl italic text-[#334537] flex-shrink-0">Café Events</h1>
 
-                <form onSubmit={handleSearch} className="hidden md:flex relative items-center w-full max-w-xs group">
-                  <Search className="absolute left-4 text-[#334537]/30 group-focus-within:text-[#334537] transition-colors" size={16} />
-                  <input
-                    type="text"
-                    placeholder={isChef ? "BUSCAR RECETA..." : "ID DE PEDIDO..."}
-                    value={searchId}
-                    onChange={(e) => setSearchId(e.target.value)}
-                    className="w-full bg-[#334537]/5 border-none rounded-full py-2 pl-11 pr-4 text-xs font-body text-[#334537] focus:ring-2 focus:ring-[#334537]/10 placeholder:text-[#334537]/20 transition-all uppercase tracking-widest"
-                  />
-                </form>
+                {!isContador && (
+                  <form onSubmit={handleSearch} className="hidden md:flex relative items-center w-full max-w-xs group">
+                    <Search className="absolute left-4 text-[#334537]/30 group-focus-within:text-[#334537] transition-colors" size={16} />
+                    <input
+                      type="text"
+                      placeholder={isAdmin ? "BUSCAR EN BITÁCORA..." : isChef ? "BUSCAR RECETA..." : "ID DE PEDIDO/EVENTO..."}
+                      value={searchId}
+                      onChange={(e) => setSearchId(e.target.value)}
+                      className="w-full bg-[#334537]/5 border-none rounded-full py-2 pl-11 pr-4 text-xs font-body text-[#334537] focus:ring-2 focus:ring-[#334537]/10 placeholder:text-[#334537]/20 transition-all uppercase tracking-widest"
+                    />
+                  </form>
+                )}
               </div>
 
               <div className="flex items-center gap-1 lg:gap-6">
-                <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-2 text-[#334537]/60">
-                  <Search size={20} />
-                </button>
-
-                {/* Notificaciones (Solo si no es cajero y hay notificaciones) */}
-                {!isCajero && (
-                  <div className="relative" ref={notificationsRef}>
-                    <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2 rounded-full transition-all relative ${isNotificationsOpen ? 'bg-[#334537] text-white' : 'text-[#334537]/60'}`}>
-                      <Bell size={20} />
-                      {notifications.length > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-[#ba1a1a] rounded-full border-2 border-[#fcf9f4]" />}
-                    </button>
-
-                    {isNotificationsOpen && (
-                      <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-[#334537]/10 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="px-5 py-4 bg-[#fcf9f4] border-b border-[#334537]/5 flex justify-between items-center">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#334537]">Avisos del Sistema</h3>
-                        </div>
-                        <div className="max-h-[400px] overflow-y-auto">
-                          {notifications.length > 0 ? (
-                            notifications.map((n) => (
-                              <button key={n.id} className="w-full p-4 flex items-start gap-4 border-b border-[#f6f3ee] hover:bg-[#fcf9f4] transition-all text-left">
-                                <div className={`mt-1 p-2 rounded-lg bg-[#f6f3ee] ${n.color}`}><n.icon size={16} /></div>
-                                <div className="flex-1">
-                                  <p className="font-headline text-base italic text-[#334537]">{n.mesa}</p>
-                                  <p className="text-xs text-[#434843]">{n.text}</p>
-                                </div>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="p-8 text-center text-xs italic text-[#434843]/50">No hay avisos nuevos</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {!isContador && (
+                  <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-2 text-[#334537]/60">
+                    <Search size={20} />
+                  </button>
                 )}
 
-                {/* Perfil */}
+                <div className="relative" ref={notificationsRef}>
+                  <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2 rounded-full transition-all relative ${isNotificationsOpen ? 'bg-[#334537] text-white' : 'text-[#334537]/60'}`}>
+                    <Bell size={20} />
+                    {notifications.length > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-[#ba1a1a] rounded-full border-2 border-[#fcf9f4]" />}
+                  </button>
+
+                  {isNotificationsOpen && (
+                    <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-[#334537]/10 shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="px-5 py-4 bg-[#fcf9f4] border-b border-[#334537]/5 flex justify-between items-center">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#334537]">
+                          {isAdmin ? 'Alertas Globales' : 'Avisos del Sistema'}
+                        </h3>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto no-scrollbar">
+                        {notifications.length > 0 ? (
+                          notifications.map((n) => (
+                            <button key={n.id} className="w-full p-4 flex items-start gap-4 border-b border-[#f6f3ee] hover:bg-[#fcf9f4] transition-all text-left">
+                              <div className={`mt-1 p-2 rounded-lg bg-[#f6f3ee] ${n.color}`}><n.icon size={16} /></div>
+                              <div className="flex-1">
+                                <p className="font-headline text-base italic text-[#334537]">{n.mesa}</p>
+                                <p className="text-xs text-[#434843]">{n.text}</p>
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center text-xs italic text-[#434843]/50">No hay avisos nuevos</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="relative" ref={profileRef}>
                   <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 group outline-none">
                     <div className={`h-9 w-9 lg:h-10 lg:w-10 rounded-full flex items-center justify-center border transition-all shadow-sm
@@ -187,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Activo
                         </p>
                         <p className="font-headline text-base italic text-[#334537]">
-                          {isChef ? 'Chef Ejecutivo' : isCajero ? 'Caja Central' : 'Pedro Pascal'}
+                          {isAdmin ? 'Dirección General' : isGerente ? 'Gerencia de Salones' : 'Usuario Operativo'}
                         </p>
                       </div>
                       <button onClick={() => router.push('/login')} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#ba1a1a] hover:bg-[#ba1a1a]/5 rounded-xl transition-all font-bold">
@@ -212,9 +257,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 Acceso Autorizado
               </p>
               <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full animate-pulse ${isChef ? 'bg-emerald-600' : isCajero ? 'bg-[#C5A059]' : 'bg-[#1a3d2e]'}`} />
+                <div className={`h-2 w-2 rounded-full animate-pulse ${
+                  isAdmin ? 'bg-red-600' : isGerente ? 'bg-purple-600' : isChef ? 'bg-emerald-600' : isCajero ? 'bg-[#C5A059]' : 'bg-[#1a3d2e]'
+                }`} />
                 <span className={`font-label text-[11px] font-black uppercase tracking-[0.15em] 
-                  ${isChef ? 'text-emerald-800' : isCajero ? 'text-[#C5A059]' : 'text-[#1a3d2e]'}`}>
+                  ${isAdmin ? 'text-red-900' : isGerente ? 'text-purple-800' : 'text-[#1a3d2e]'}`}>
                   Módulo {userRole}
                 </span>
               </div>
@@ -224,7 +271,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <nav className="flex-1 space-y-1">
             {currentMenu.map((item) => {
-              const defaultViews = { chef: 'resumen', cajero: 'ventas', mesero: 'mapa' };
+              const defaultViews = { administrador: 'resumen', gerente: 'reservas', chef: 'resumen', cajero: 'ventas', mesero: 'mapa', contador: 'reportes' };
               const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultViews[userRole]);
               const Icon = item.icon;
               return (
@@ -246,7 +293,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {!isPedidoView && (
           <nav className="lg:hidden fixed bottom-0 w-full bg-white border-t border-[#334537]/10 px-6 h-16 flex items-center justify-around z-50">
             {currentMenu.map((item) => {
-              const defaultViews = { chef: 'resumen', cajero: 'ventas', mesero: 'mapa' };
+              const defaultViews = { administrador: 'resumen', gerente: 'reservas', chef: 'resumen', cajero: 'ventas', mesero: 'mapa', contador: 'reportes' };
               const isActive = currentView === item.viewKey || (!currentView && item.viewKey === defaultViews[userRole]);
               const Icon = item.icon;
               return (
