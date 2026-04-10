@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: #4A5D4E;
+  --color-strong-green: #1a3d2e; /* El verde fuerte de la imagen */
+  --color-secondary: #2C2C2C;
+  --color-tertiary: #C5A059;
+  --color-neutral: #F5F2ED;
+  --font-headline: var(--font-newsreader);
+  --font-body: var(--font-manrope);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-neutral);
+    color: var(--color-secondary);
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ESTILIZADO DE BARRA DE DESPLAZAMIENTO (Scrollbar) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1a3d2e #f6f3ee;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #f6f3ee;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #1a3d2e;
+    border-radius: 20px;
+    border: 1px solid #f6f3ee;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .serif-display {
+    font-family: var(--font-newsreader);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em; 
+    line-height: 1;
+  }
+
+  .label-caps {
+    font-family: var(--font-manrope);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+  }
 }
